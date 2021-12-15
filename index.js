@@ -1,8 +1,10 @@
+require("dotenv").config()
 const { response } = require("express")
 const express = require("express")
 const morgan = require("morgan")
 const app = express()
 const cors = require("cors")
+const Contacts = require("./models/contacts")
 
 app.use(cors())
 app.use(express.json())
@@ -19,30 +21,6 @@ app.use(morgan(":method :url :status :res[content-length] - :response-time ms :r
 	skip: (req, res) => { return req.method !== "POST" }
 }))
 
-let persons =
-	[
-		{
-			name: "Arto Hellas",
-			number: "040-124512",
-			id: 1
-		},
-		{
-			name: "Ada Lovelace",
-			number: "23-42-3241214834",
-			id: 2
-		},
-		{
-			name: "Dominic Khan",
-			number: "39-44-125123",
-			id: 3
-		},
-		{
-			name: "Mary Poppendieck",
-			number: "39-23-6423122",
-			id: 4
-		}
-	]
-
 app.get("/", (req, res) => {
 	res.send("<h1>Puhelinluettelo backend</h1>")
 })
@@ -54,17 +32,15 @@ app.get("/info", (req, res) => {
 })
 
 app.get("/api/persons", (req, res) => {
-	res.json(persons)
+	Contacts.find({}).then(contacts => {
+		res.json(contacts)
+	})
 })
 
 app.get("/api/persons/:id", (req, res) => {
-	const id = Number(req.params.id)
-	const person = persons.find(p => p.id === id)
-	if (person) {
-		res.json(person)
-	} else {
-		res.status(404).end()
-	}
+	Contacts.findById(req.params.id).then(contact => {
+		res.json(contact)
+	})
 })
 
 app.delete("/api/persons/:id", (req, res) => {
@@ -81,22 +57,24 @@ app.post("/api/persons", (req, res) => {
 		return res.status(403).json({
 			error: "no person details given"
 		})
-	} else if (persons.find(p => p.name === body.name)) {
-		return res.status(403).json({
-			error: "name must be unique"
-		})
 	}
+	// else if (Contacts.find(contact => contact.name === body.name)) {
+	// 	return res.status(403).json({
+	// 		error: "name must be unique"
+	// 	})
+	// }
 
-	const person = {
+	const contact = new Contacts({
 		name: body.name,
 		number: body.number,
-		id: Math.floor(Math.random() * 100000)
-	}
-	persons = persons.concat(person)
-	res.json(person)
+	})
+
+	contact.save().then(savedContact => {
+		res.json(savedContact)
+	})
 })
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
 	console.log(`Backend running on port ${PORT}`)
 })
